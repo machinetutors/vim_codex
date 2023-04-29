@@ -54,14 +54,25 @@ def initialize_openai_api():
 
 def complete_input_max_length(input_prompt, max_input_length=MAX_SUPPORTED_INPUT_LENGTH, stop=None, max_tokens=64):
     input_prompt = input_prompt[-max_input_length:]
-    response = openai.Completion.create(engine='code-davinci-001', prompt=input_prompt, best_of=1, temperature=0.5, max_tokens=max_tokens, stream=USE_STREAM_FEATURE, stop=stop)
+    # response = openai.ChatCompletion.create(model='gpt-3.5-turbo', messages=[{"role": "user", "content": "Hello!"}] )
+    response = openai.Completion.create(
+                    model="text-davinci-002",
+                    # model="gpt-3.5-turbo",
+                    prompt=input_prompt,
+                    best_of=2,
+                    max_tokens=max_tokens,
+                    temperature=0.8,
+                    stream=False,
+                    stop=stop
+                )
+    # response = openai.Completion.create(engine='gpt-3.5-turbo', prompt=input_prompt, best_of=1, temperature=0.5, max_tokens=max_tokens, stream=USE_STREAM_FEATURE, stop=stop)
     return response
 
 def complete_input(input_prompt, stop, max_tokens):
     try:
-        response = complete_input_max_length(input_prompt, int(2.5 * MAX_SUPPORTED_INPUT_LENGTH), stop=stop, max_tokens=max_tokens)
-    except openai.error.InvalidRequestError:
         response = complete_input_max_length(input_prompt, MAX_SUPPORTED_INPUT_LENGTH, stop=stop, max_tokens=max_tokens)
+    except openai.error.InvalidRequestError:
+        response = complete_input_max_length(input_prompt, MAX_SUPPORTED_INPUT_LENGTH//2, stop=stop, max_tokens=max_tokens)
         print('Using shorter input.')
 
     return response
@@ -130,6 +141,7 @@ def create_completion(stop=None):
     max_tokens = get_max_tokens()
     vim_buf = vim.current.buffer
     input_prompt = '\n'.join(vim_buf[:])
+    #vim.command(f'echo "{input_prompt}"')
     
     row, col = vim.current.window.cursor
     input_prompt = '\n'.join(vim_buf[row:])
@@ -152,7 +164,8 @@ def write_response(response, stop):
             return
         if vim.eval('getchar(0)') != '0':
             return
-
+        
+        USE_STREAM_FEATURE = False
         if USE_STREAM_FEATURE:
             single_response = next(response)
         else:
